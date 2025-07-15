@@ -1,2 +1,65 @@
 # Pass.jl
-A Julia interface to the `pass` command
+
+A Julia interface to the `pass` command-line password manager.
+
+## Overview
+
+Pass.jl provides a simple, dictionary-like interface to retrieve passwords and secrets stored in the standard Unix `pass` password store. It allows Julia programs to securely access stored credentials without manual intervention.
+
+## Installation
+
+```julia
+using Pkg
+Pkg.add(url="https://github.com/kylesjohnston/Pass.jl")
+```
+
+## Usage
+
+```julia
+using Pass
+
+# Retrieve a password (throws KeyError if not found)
+password = PASS["my-service/username"]
+
+# Retrieve a password with a default fallback
+password = get(PASS, "my-service/username", "default-password")
+
+# Example: Using with database connections
+db_password = PASS["database/production"]
+connection = connect_to_db("user", db_password)
+
+# Example: Handling missing passwords gracefully
+api_key = get(PASS, "services/api-key", nothing)
+if api_key === nothing
+    @warn "API key not found in password store"
+else
+    # Use the API key
+end
+```
+
+## Requirements
+
+- The `pass` command must be installed and configured on your system
+- Your password store must be initialized (`pass init`)
+- Passwords must be stored using standard `pass` commands (e.g., `pass insert my-service/username`)
+
+## API Reference
+
+### `PASS`
+
+A global `PassStore` instance that provides dictionary-like access to your password store.
+
+**Methods:**
+- `PASS[key]` - Retrieve password for the given key (throws `KeyError` if not found)
+- `get(PASS, key, default)` - Retrieve password or return default if not found
+
+## Error Handling
+
+- `KeyError` is thrown when accessing a non-existent password entry
+- Other process-related errors are re-thrown as-is
+
+## Security Notes
+
+- Passwords are retrieved directly from the `pass` command and held in memory briefly
+- No passwords are cached or stored persistently by this package
+- Ensure your `pass` store is properly secured with GPG encryption
