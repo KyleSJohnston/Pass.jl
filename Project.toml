@@ -2,3 +2,9 @@ name = "Pass"
 uuid = "6ed7128e-5fc2-4746-ae6a-36dc4e8642dc"
 authors = ["Kyle S. Johnston <KyleSJohnston@users.noreply.github.com>"]
 version = "0.1.0"
+
+[deps]
+Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
+
+[compat]
+Logging = "1.11.0"

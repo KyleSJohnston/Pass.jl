@@ -1,13 +1,46 @@
 module Pass
 
-export PASS
+using Logging
 
-struct PassStore end
+export PASS, PassStore
+public init
 
-function Base.getindex(::PassStore, key::String)
-    error_buffer = IOBuffer()
+struct PassStore
+    dir::Union{String,Nothing}
+
+    function PassStore(dir=nothing)
+        if isnothing(dir)
+            return new(nothing)
+        else
+            if !isdir(dir)
+                throw(ArgumentError("$dir is not a directory"))
+            end
+            return new(String(dir))
+        end
+    end
+end
+
+
+function init(pass::PassStore, gpgid::AbstractString)
+    cmd = pipeline(addenv(`pass init $gpgid`, "PASSWORD_STORE_DIR" => pass.dir), stderr=IOBuffer())
+    result = readchomp(cmd)
+    @info result
+    return
+end
+
+
+# function insert(pass::PassStore, key::AbstractString, value::AbstractString)
+#     cmd = pipeline(addenv(`pass insert $key`, "PASSWORD_STORE_DIR" => pass.dir), stderr=IOBuffer())
+#     result = readchomp(cmd)
+#     @info result
+#     return
+# end
+
+
+function Base.getindex(pass::PassStore, key::AbstractString)
+    cmd = pipeline(addenv(`pass show $key`, "PASSWORD_STORE_DIR" => pass.dir), stderr=IOBuffer())
     try
-        return readchomp(pipeline(`pass $key`, stderr=error_buffer))
+        return readchomp(cmd)
     catch e
         if e isa ProcessFailedException
             throw(KeyError(key))
@@ -17,7 +50,7 @@ function Base.getindex(::PassStore, key::String)
     end
 end
 
-function Base.get(pass::PassStore, key::String, default)
+function Base.get(pass::PassStore, key::AbstractString, default)
     try
         return getindex(pass, key)
     catch e
