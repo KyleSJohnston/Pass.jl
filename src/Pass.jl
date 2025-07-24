@@ -3,47 +3,88 @@ module Pass
 using Logging
 
 export PASS, PassStore
-public init
 
 struct PassStore
     dir::Union{String,Nothing}
 
     function PassStore(dir=nothing)
-        if isnothing(dir)
-            return new(nothing)
-        else
-            if !isdir(dir)
-                throw(ArgumentError("$dir is not a directory"))
-            end
-            return new(String(dir))
-        end
+        # Validate pass command exists and works
+        validate_pass_command()
+        
+        # Resolve store directory
+        resolved_dir = resolve_store_directory(dir)
+        validate_store_directory(resolved_dir)
+        
+        @debug "Using password store directory: $resolved_dir"
+        
+        return new(resolved_dir)
     end
 end
 
 
-function init(pass::PassStore, gpgid::AbstractString)
-    cmd = pipeline(addenv(`pass init $gpgid`, "PASSWORD_STORE_DIR" => pass.dir), stderr=IOBuffer())
-    result = readchomp(cmd)
-    @info result
-    return
+function validate_pass_command()
+    try
+        run(pipeline(`pass --version`, stdout=devnull, stderr=devnull))
+    catch e
+        if e isa ProcessFailedException || e isa Base.IOError
+            throw(SystemError("pass command not found or not working. Please install pass."))
+        else
+            rethrow(e)
+        end
+    end
+end
+
+function default_store_directory()
+    return joinpath(homedir(), ".password-store")
+end
+
+function resolve_store_directory(dir)
+    if dir isa AbstractString
+        # Explicit directory provided
+        return String(dir)
+    elseif isnothing(dir)
+        # Explicitly ignore environment variable, use default
+        return default_store_directory()
+    else
+        # Use environment variable if set, otherwise default
+        return get(ENV, "PASSWORD_STORE_DIR", default_store_directory())
+    end
+end
+
+function validate_store_directory(dir::AbstractString)
+    if !isdir(dir)
+        throw(ArgumentError("Password store directory '$dir' does not exist"))
+    end
+    
+    gpg_id_file = joinpath(dir, ".gpg-id")
+    if !isfile(gpg_id_file)
+        throw(ArgumentError("Password store not initialized. Run 'pass init <gpg-id>' first in directory '$dir'"))
+    end
 end
 
 
-# function insert(pass::PassStore, key::AbstractString, value::AbstractString)
-#     cmd = pipeline(addenv(`pass insert $key`, "PASSWORD_STORE_DIR" => pass.dir), stderr=IOBuffer())
-#     result = readchomp(cmd)
-#     @info result
-#     return
-# end
-
 
 function Base.getindex(pass::PassStore, key::AbstractString)
-    cmd = pipeline(addenv(`pass show $key`, "PASSWORD_STORE_DIR" => pass.dir), stderr=IOBuffer())
+    stderr_buffer = IOBuffer()
+    cmd = pipeline(addenv(`pass show $key`, "PASSWORD_STORE_DIR" => pass.dir), stderr=stderr_buffer)
+    
     try
         return readchomp(cmd)
     catch e
         if e isa ProcessFailedException
-            throw(KeyError(key))
+            stderr_output = String(take!(stderr_buffer))
+            
+            # Parse specific error types based on stderr content
+            if contains(stderr_output, "is not in the password store")
+                throw(KeyError(key))
+            elseif contains(stderr_output, "gpg: decryption failed") || contains(stderr_output, "gpg: public key decryption failed")
+                throw(ArgumentError("GPG decryption failed - check your GPG key and passphrase"))
+            elseif contains(stderr_output, "gpg: No secret key") || contains(stderr_output, "gpg: secret key not available")
+                throw(ArgumentError("GPG secret key not available for decryption"))
+            else
+                # Re-throw with more context
+                error("pass command failed with exit code $(e.procs[1].exitcode): $stderr_output")
+            end
         else
             rethrow(e)
         end
@@ -59,6 +100,15 @@ function Base.get(pass::PassStore, key::AbstractString, default)
         else
             rethrow(e)
         end
+    end
+end
+
+function Base.haskey(pass::PassStore, key::AbstractString)
+    try
+        getindex(pass, key)
+        return true
+    catch KeyError
+        return false
     end
 end
 
@@ -85,6 +135,7 @@ end
 # Methods
 - `PASS[key]`: Retrieve password for the given key
 - `get(PASS, key, default)`: Retrieve password or return default if not found
+- `haskey(PASS, key)`: Check if a password exists for the given key
 
 # Throws
 - `KeyError`: When the requested password entry does not exist in the password store
