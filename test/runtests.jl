@@ -1,13 +1,19 @@
-using Test
+using Logging
 using Pass
+using Test
 
+# Creates a temporary GPG home directory for testing
+# Executes function f with GNUPGHOME set to the temporary directory
 function tempgpg(f)
     gpgdir = mktempdir()
     return withenv(f, "GNUPGHOME" => gpgdir)
 end
 
+# Returns the path to the GPG configuration file used for test key generation
 configpath() = joinpath(dirname(@__FILE__), "gpgconfig.txt")
 
+# Creates a new GPG key for testing using the configuration file
+# Returns the key ID of the generated key
 function create_gpgkey()
     config = configpath()
     # Generate the key
@@ -24,6 +30,8 @@ function create_gpgkey()
     return key_id
 end
 
+# Extracts the GPG key ID from gpg --list-secret-keys output
+# Parses the output to find the key ID in the ssb line
 function extract_key_id(gpg_output)
     for line in eachline(gpg_output)
         if startswith(line, "ssb")
@@ -38,7 +46,8 @@ function extract_key_id(gpg_output)
     error("No key id!")
 end
 
-# Test utility functions for pass store initialization
+# Test utility function to initialize a pass store in the given directory
+# Uses the specified GPG key ID for encryption
 function init(dir::AbstractString, gpgid::AbstractString)
     cmd = pipeline(addenv(`pass init $gpgid`, "PASSWORD_STORE_DIR" => dir), stderr=IOBuffer())
     result = readchomp(cmd)
@@ -46,6 +55,8 @@ function init(dir::AbstractString, gpgid::AbstractString)
     return
 end
 
+# Test utility function to insert a password into the pass store
+# Stores the given value at the specified key path
 function insert(dir::AbstractString, key::AbstractString, value::AbstractString)
     cmd = pipeline(addenv(`echo $value`, "PASSWORD_STORE_DIR" => dir), addenv(`pass insert --echo $key`, "PASSWORD_STORE_DIR" => dir))
     result = readchomp(cmd)
@@ -53,6 +64,8 @@ function insert(dir::AbstractString, key::AbstractString, value::AbstractString)
     return
 end
 
+# Finds a non-existent directory path for testing error conditions
+# Tries up to 5 random directory names in the temp directory
 function find_nonexistent_dir()
     for i in 1:5
         candidate = joinpath(tempdir(), "nonexistent_$(rand(1000:9999))")
