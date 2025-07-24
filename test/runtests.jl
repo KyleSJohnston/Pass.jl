@@ -11,7 +11,11 @@ configpath() = joinpath(dirname(@__FILE__), "gpgconfig.txt")
 function create_gpgkey()
     config = configpath()
     # Generate the key
-    run(`gpg --batch --generate-key $config`)
+    stdout_buffer = IOBuffer()
+    stderr_buffer = IOBuffer()
+    run(pipeline(`gpg --batch --generate-key $config`, stdout=stdout_buffer, stderr=stderr_buffer))
+    @debug "GPG key generation stdout: $(String(take!(stdout_buffer)))"
+    @debug "GPG key generation stderr: $(String(take!(stderr_buffer)))"
 
     output = IOBuffer(read(`gpg --list-secret-keys --keyid-format LONG`, String))
     # Parse the output to find the key ID
@@ -57,43 +61,44 @@ function find_nonexistent_dir()
     error("Unable to find nonexistent directory after 5 attempts")
 end
 
-@testset "Pass command validation" begin
-    # Test when pass command is not available
-    withenv("PATH" => "") do
-        @test_throws SystemError PassStore()
-    end
-end
+tempgpg() do
+    gpgkey = create_gpgkey()
+    @debug "Using GPG key: $gpgkey"
 
-@testset "Store directory validation" begin
-    # Test nonexistent directory
-    nonexistent_dir = find_nonexistent_dir()
-    @test_throws ArgumentError PassStore(nonexistent_dir)
-    
-    # Test directory without .gpg-id file (uninitialized store)
-    mktempdir() do tempdir
-        @test_throws ArgumentError PassStore(tempdir)
+    @testset "Pass command validation" begin
+        # Test when pass command is not available
+        withenv("PATH" => "") do
+            @test_throws SystemError PassStore()
+        end
     end
-end
 
-@testset "Environment variable handling" begin
-    tempgpg() do
-        key = create_gpgkey()
-        
+    @testset "Store directory validation" begin
+        # Test nonexistent directory
+        nonexistent_dir = find_nonexistent_dir()
+        @test_throws ArgumentError PassStore(nonexistent_dir)
+
+        # Test directory without .gpg-id file (uninitialized store)
+        mktempdir() do tempdir
+            @test_throws ArgumentError PassStore(tempdir)
+        end
+    end
+
+    @testset "Environment variable handling" begin
         # Test explicit directory takes precedence
         mktempdir() do passdir
-            init(passdir, key)
-            
+            init(passdir, gpgkey)
+
             withenv("PASSWORD_STORE_DIR" => "/some/other/dir") do
                 # Should use explicit directory, not env var
                 store = PassStore(passdir)
                 @test store.dir == passdir
             end
         end
-        
+
         # Test environment variable is used when dir not specified
         mktempdir() do passdir2
-            init(passdir2, key)
-            
+            init(passdir2, gpgkey)
+
             withenv("PASSWORD_STORE_DIR" => passdir2) do
                 # Test that resolve_store_directory respects env var
                 resolved = Pass.resolve_store_directory(missing)
@@ -101,35 +106,29 @@ end
             end
         end
     end
-end
 
-@testset "Password operations" begin
-    tempgpg() do
-        key = create_gpgkey()
+    @testset "Password operations" begin
         mktempdir() do passdir
-            init(passdir, key)
+            init(passdir, gpgkey)
             store = PassStore(passdir)
-            
+
             # Test KeyError for missing password
             @test_throws KeyError store["nonexistent"]
-            
+
             # Test get with default for missing password
             @test get(store, "nonexistent", "default") == "default"
             @test isnothing(get(store, "nonexistent", nothing))
-            
+
             # Test haskey for missing password
             @test !haskey(store, "nonexistent")
         end
     end
-end
 
-@testset "Error message differentiation" begin
-    tempgpg() do
-        key = create_gpgkey()
+    @testset "Error message differentiation" begin
         mktempdir() do passdir
-            init(passdir, key)
+            init(passdir, gpgkey)
             store = PassStore(passdir)
-            
+
             # Test that missing passwords throw KeyError specifically
             try
                 store["missing-password"]
@@ -138,58 +137,51 @@ end
                 @test e isa KeyError
                 @test e.key == "missing-password"
             end
-            
+
             # Test haskey doesn't throw for missing passwords
             @test !haskey(store, "missing-password")
-            
+
             # Test get returns default for missing passwords
             @test get(store, "missing-password", "fallback") == "fallback"
         end
     end
-end
 
-@testset "Password insertion and retrieval" begin
-    tempgpg() do
-        key = create_gpgkey()
+    @testset "Password insertion and retrieval" begin
         mktempdir() do passdir
-            init(passdir, key)
-            
+            init(passdir, gpgkey)
+
             # Insert a test password
             test_password = "secret123"
             insert(passdir, "test/service", test_password)
-            
+
             store = PassStore(passdir)
-            
+
             # Test password can be retrieved
             @test store["test/service"] == test_password
             @test get(store, "test/service", "fallback") == test_password
             @test haskey(store, "test/service")
-            
+
             # Insert another password with special characters
             complex_password = "p@ssw0rd!#\$%"
             insert(passdir, "complex/password", complex_password)
-            
+
             @test store["complex/password"] == complex_password
             @test haskey(store, "complex/password")
-            
+
             # Test nested paths work
             insert(passdir, "work/email/gmail", "gmail_pass")
             insert(passdir, "work/email/outlook", "outlook_pass")
-            
+
             @test store["work/email/gmail"] == "gmail_pass"
             @test store["work/email/outlook"] == "outlook_pass"
             @test haskey(store, "work/email/gmail")
             @test haskey(store, "work/email/outlook")
         end
     end
-end
 
-@testset "Make a key" begin
-    tempgpg() do
-        key = create_gpgkey()
-        println("using $key for gpg")
+    @testset "Basic functionality" begin
         mktempdir() do passdir
-            init(passdir, key)
+            init(passdir, gpgkey)
             store = PassStore(passdir)
             @test isnothing(get(store, "foo", nothing))
         end
