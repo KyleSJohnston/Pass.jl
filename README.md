@@ -35,6 +35,12 @@ if api_key === nothing
 else
     # Use the API key
 end
+
+# Example: Check if password exists before accessing
+if haskey(PASS, "optional/service")
+    password = PASS["optional/service"]
+    # Use the password
+end
 ```
 
 ## Requirements
@@ -52,6 +58,7 @@ A global `PassStore` instance that provides dictionary-like access to your passw
 **Methods:**
 - `PASS[key]` - Retrieve password for the given key (throws `KeyError` if not found)
 - `get(PASS, key, default)` - Retrieve password or return default if not found
+- `haskey(PASS, key)` - Check if a password exists for the given key
 
 ## Error Handling
 
