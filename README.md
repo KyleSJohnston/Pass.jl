@@ -18,6 +18,8 @@ Pkg.add(url="https://github.com/kylesjohnston/Pass.jl")
 ```julia
 using Pass
 
+const PASS = PassStore()
+
 # Retrieve a password (throws KeyError if not found)
 password = PASS["my-service/username"]
 
@@ -51,14 +53,13 @@ end
 
 ## API Reference
 
-### `PASS`
-
-A global `PassStore` instance that provides dictionary-like access to your password store.
+`PassStore()` provides access to the default password store.
+`PassStore(dir)` provides access to the password store in `dir`.
 
 **Methods:**
-- `PASS[key]` - Retrieve password for the given key (throws `KeyError` if not found)
-- `get(PASS, key, default)` - Retrieve password or return default if not found
-- `haskey(PASS, key)` - Check if a password exists for the given key
+- `store[key]` - Retrieve password for the given key (throws `KeyError` if not found)
+- `get(store, key, default)` - Retrieve password or return default if not found
+- `haskey(store, key)` - Check if a password exists for the given key
 
 ## Error Handling
 
@@ -67,6 +68,6 @@ A global `PassStore` instance that provides dictionary-like access to your passw
 
 ## Security Notes
 
-- Passwords are retrieved directly from the `pass` command and held in memory briefly
+- Passwords are retrieved directly from the `pass` command
 - No passwords are cached or stored persistently by this package
 - Ensure your `pass` store is properly secured with GPG encryption
