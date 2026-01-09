@@ -216,6 +216,6 @@ end
 # Throws
 - `KeyError`: When the requested password entry does not exist in the password store
 """
-const PASS = PassStore()
+const PASS = nothing  # PassStore()
 
 end # module Pass
