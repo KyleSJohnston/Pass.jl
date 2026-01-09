@@ -2,9 +2,10 @@ module Pass
 
 using Logging
 
-export PASS, PassStore
+export PassStore
 
-"""    PassStore(dir=nothing)
+"""
+    PassStore(dir=nothing)
 
 A password store interface that provides dictionary-like access to the `pass` command-line password manager.
 
@@ -92,7 +93,8 @@ end
 
 
 
-"""    getindex(pass::PassStore, key::AbstractString)
+"""
+    getindex(pass::PassStore, key::AbstractString)
 
 Retrieve a password from the password store.
 
@@ -134,7 +136,8 @@ function Base.getindex(pass::PassStore, key::AbstractString)
     end
 end
 
-"""    get(pass::PassStore, key::AbstractString, default)
+"""
+    get(pass::PassStore, key::AbstractString, default)
 
 Retrieve a password from the password store with a default fallback.
 
@@ -161,7 +164,8 @@ function Base.get(pass::PassStore, key::AbstractString, default)
     end
 end
 
-"""    haskey(pass::PassStore, key::AbstractString)
+"""
+    haskey(pass::PassStore, key::AbstractString)
 
 Check if a password entry exists in the password store.
 
@@ -187,35 +191,5 @@ function Base.haskey(pass::PassStore, key::AbstractString)
         end
     end
 end
-
-"""
-    PASS
-
-A global instance of `PassStore` that provides dictionary-like access to the system's `pass` password store.
-
-# Examples
-
-```julia
-# Retrieve a password (throws KeyError if not found)
-password = PASS["my-service/username"]
-
-# Retrieve a password with default fallback
-password = get(PASS, "my-service/username", "default-password")
-
-# Check if a password exists
-if haskey(PASS, "my-service/username")
-    password = PASS["my-service/username"]
-end
-```
-
-# Methods
-- `PASS[key]`: Retrieve password for the given key
-- `get(PASS, key, default)`: Retrieve password or return default if not found
-- `haskey(PASS, key)`: Check if a password exists for the given key
-
-# Throws
-- `KeyError`: When the requested password entry does not exist in the password store
-"""
-const PASS = PassStore()
 
 end # module Pass
