@@ -27,8 +27,9 @@ jobs:
       fail-fast: true
       matrix:
         version:
-          - '1.10'
+          - 'lts'
           - '1.12'
+          - 'pre'
           - 'nightly'
         os:
           - ubuntu-latest
