@@ -1,6 +1,17 @@
+using Aqua
 using Logging
 using Pass
 using Test
+
+@testset "Source Code Tests" begin
+    @testset "Code quality (Aqua.jl)" begin
+        Aqua.test_all(Pass)
+    end
+    # @testset "Code linting (JET.jl)" begin
+    #     JET.test_package(ExampleJuliaRepo; target_defined_modules = true)
+    # end
+end
+
 
 # Creates a temporary GPG home directory for testing
 # Executes function f with GNUPGHOME set to the temporary directory
