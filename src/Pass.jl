@@ -1,3 +1,6 @@
+"""
+Provides `PassStore`, a Dict-like interface to the unix `pass` command
+"""
 module Pass
 
 using Logging
@@ -21,7 +24,7 @@ store = PassStore()
 store = PassStore("/path/to/my/store")
 
 # Retrieve passwords
-password = store["service/username"]
+password = store["service/password"]
 ```
 
 # Throws
