@@ -1,4 +1,5 @@
 using Aqua
+using JET
 using Logging
 using Pass
 using Test
@@ -7,9 +8,9 @@ using Test
     @testset "Code quality (Aqua.jl)" begin
         Aqua.test_all(Pass)
     end
-    # @testset "Code linting (JET.jl)" begin
-    #     JET.test_package(ExampleJuliaRepo; target_defined_modules = true)
-    # end
+    @testset "Code linting (JET.jl)" begin
+        JET.test_package(Pass; target_modules = (Pass,))
+    end
 end
 
 
