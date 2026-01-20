@@ -8,11 +8,16 @@ This package provides `PassStore`, a read-only Dict-like object inspired by `Bas
 Pass.jl can be installed using `Pkg`.
 
 ```julia
-pkg> add Pass
+pkg> add https://github.com/kylesjohnston/Pass.jl#v0.1.3
 ```
 
+### Requirements
+
 Installation of Pass.jl does _not_ attempt to install `pass` (or `gpg`) on your system.
-`pass` needs to be available at the command line in order for Pass.jl to operate successfully.
+
+- The `pass` command must be installed on your system and available as `pass`.
+- Your password store must be initialized (i.e.: `pass init`).
+- Passwords must be stored using standard `pass` commands (e.g., `pass insert my-service/username`)
 
 ## Example Usage
 
@@ -61,6 +66,14 @@ api_key = store["service/api_key"]  # "EXAMPLE-API-KEY"
     ```
 
 Pass.jl does not cache or store any of the values, for both simplicity and security.
+Secrets are retrieved directly from the `pass` command.
+A `KeyError` is thrown when accessing a non-existent password entry.
+Other process-related errors are re-thrown.
+
+### Methods
+- `store[key]` - retrieves secret with `key` (throws `KeyError` if not found)
+- `get(store, key, default)` - retrieves secret, returning `default` if `key` not found
+- `haskey(store, key)` - checks for a secret for `key`
 
 ## API
 
@@ -76,10 +89,13 @@ Order   = [:type, :module]
 ## Setup
 
 !!! danger
-    Pass.jl is only as secure as your `pass` configuration, which is your responsibility to manage.
-    The examples here and in the unit tests are meant to serve as a starting point for moving away from plaintext credential storage.
+    Pass.jl is only as secure as your `pass` configuration.
+    It is your responsibility to manage that configuration.
+
+    The intructions here are meant to serve as a starting point for moving away from plaintext credential storage.
     Review `man gpg` and `man pass` to learn about the options that are right for you.
-    Note that the example configuration in the unit tests are only meant to  
+
+    Note that the example configuration in the unit tests are **only** intended for testing purposes.
 
 Approximate steps:
 1. Generate a new gpg key `gpg --full-generate-key`

@@ -1,5 +1,7 @@
 # Pass.jl
 
+[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://kylesjohnston.github.io/Pass.jl/stable)
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://kylesjohnston.github.io/Pass.jl/dev)
 [![Build Status](https://github.com/kylesjohnston/Pass.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/kylesjohnston/Pass.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 [![JET](https://img.shields.io/badge/%F0%9F%9B%A9%EF%B8%8F_tested_with-JET.jl-233f9a)](https://github.com/aviatesk/JET.jl)
@@ -14,7 +16,7 @@ Pass.jl provides a simple, dictionary-like interface to retrieve passwords and s
 
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/kylesjohnston/Pass.jl")
+Pkg.add(url="https://github.com/kylesjohnston/Pass.jl#v0.1.3")
 ```
 
 ## Usage
@@ -25,17 +27,13 @@ using Pass
 const PASS = PassStore()
 
 # Retrieve a password (throws KeyError if not found)
-password = PASS["my-service/username"]
+password = PASS["example-service/password"]
 
 # Retrieve a password with a default fallback
-password = get(PASS, "my-service/username", "default-password")
-
-# Example: Using with database connections
-db_password = PASS["database/production"]
-connection = connect_to_db("user", db_password)
+password = get(PASS, "example-service/password", "default-password")
 
 # Example: Handling missing passwords gracefully
-api_key = get(PASS, "services/api-key", nothing)
+api_key = get(PASS, "another_service/api_key", nothing)
 if api_key === nothing
     @warn "API key not found in password store"
 else
@@ -43,35 +41,8 @@ else
 end
 
 # Example: Check if password exists before accessing
-if haskey(PASS, "optional/service")
-    password = PASS["optional/service"]
-    # Use the password
+if haskey(PASS, "optional_service/token")
+    token = PASS["optional_service/token"]
+    # Use the token
 end
 ```
-
-## Requirements
-
-- The `pass` command must be installed and configured on your system
-- Your password store must be initialized (`pass init`)
-- Passwords must be stored using standard `pass` commands (e.g., `pass insert my-service/username`)
-
-## API Reference
-
-`PassStore()` provides access to the default password store.
-`PassStore(dir)` provides access to the password store in `dir`.
-
-**Methods:**
-- `store[key]` - Retrieve password for the given key (throws `KeyError` if not found)
-- `get(store, key, default)` - Retrieve password or return default if not found
-- `haskey(store, key)` - Check if a password exists for the given key
-
-## Error Handling
-
-- `KeyError` is thrown when accessing a non-existent password entry
-- Other process-related errors are re-thrown as-is
-
-## Security Notes
-
-- Passwords are retrieved directly from the `pass` command
-- No passwords are cached or stored persistently by this package
-- Ensure your `pass` store is properly secured with GPG encryption
