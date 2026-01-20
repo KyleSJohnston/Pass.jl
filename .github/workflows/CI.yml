@@ -30,7 +30,7 @@ jobs:
           - 'lts'
           - '1.12'
           - 'pre'
-          # - 'nightly'
+          - 'nightly'
         os:
           - ubuntu-latest
         arch:

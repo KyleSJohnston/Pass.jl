@@ -8,8 +8,10 @@ using Test
     @testset "Code quality (Aqua.jl)" begin
         Aqua.test_all(Pass)
     end
-    @testset "Code linting (JET.jl)" begin
-        JET.test_package(Pass; target_modules = (Pass,))
+    if VERSION < v"1.13"
+        @testset "Code linting (JET.jl)" begin
+            JET.test_package(Pass; target_modules = (Pass,))
+        end
     end
 end
 
